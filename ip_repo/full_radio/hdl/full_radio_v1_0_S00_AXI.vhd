@@ -119,7 +119,39 @@ architecture arch_imp of full_radio_v1_0_S00_AXI is
 	signal byte_index	: integer;
 	signal aw_en	: std_logic;
 
+--reset
+	signal rstn :std_logic;
+	signal counter : unsigned (31 downto 0);
+	-- dds
+	signal dds_0_o : std_logic_vector (15 downto 0);
+	signal dds_0_valid : std_logic;
+	signal dds_1_o : std_logic_vector (31 downto 0);
+	signal dds_1_valid : std_logic;
+	signal dds_raw : std_logic_vector (31 downto 0);
+	signal dds_valid : std_logic ;
+	signal dds_i_temp : std_logic_vector (31 downto 0);
+	signal dds_r_temp : std_logic_vector (31 downto 0);
+	--filters
+	signal f1_r,f2_r,f1_dvalid,f2_dvalid : std_logic ;
+	signal f1_out : std_logic_vector (39 downto 0);
+	signal f2_out : std_logic_vector (55 downto 0);
+	signal f1_r_i,f2_r_i,f1_i_dvalid,f2_i_dvalid : std_logic ;
+	signal f1_i_out : std_logic_vector (39 downto 0);
+	signal f2_i_out : std_logic_vector (55 downto 0);
+
+
 COMPONENT dds_compiler_0
+  PORT (
+    aclk : IN STD_LOGIC;
+    aresetn : IN STD_LOGIC;
+    s_axis_phase_tvalid : IN STD_LOGIC;
+    s_axis_phase_tdata : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
+    m_axis_data_tvalid : OUT STD_LOGIC;
+    m_axis_data_tdata : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+  );
+    END COMPONENT;
+    
+    COMPONENT dds_compiler_1
   PORT (
     aclk : IN STD_LOGIC;
     aresetn : IN STD_LOGIC;
@@ -129,6 +161,29 @@ COMPONENT dds_compiler_0
     m_axis_data_tdata : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
     END COMPONENT;
+    
+  COMPONENT fir_compiler_0
+    port(
+    aclk : IN std_logic;
+    s_axis_data_tvalid : IN STD_LOGIC;
+    s_axis_data_tready : OUT STD_LOGIC;
+    s_axis_data_tdata : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+    m_axis_data_tvalid : OUT STD_LOGIC;
+    m_axis_data_tdata : OUT STD_LOGIC_VECTOR(39 DOWNTO 0)
+  );
+    END COMPONENT;
+    
+    COMPONENT fir_compiler_1
+    port(
+    aclk : IN std_logic;
+    s_axis_data_tvalid : IN STD_LOGIC;
+    s_axis_data_tready : OUT STD_LOGIC;
+    s_axis_data_tdata : IN STD_LOGIC_VECTOR(39 DOWNTO 0);
+    m_axis_data_tvalid : OUT STD_LOGIC;
+    m_axis_data_tdata : OUT STD_LOGIC_VECTOR(55 DOWNTO 0)
+  );
+    END COMPONENT;
+
 
 begin
 	-- I/O Connections assignments
@@ -371,7 +426,7 @@ begin
 	      when b"10" =>
 	        reg_data_out <= slv_reg2;
 	      when b"11" =>
-	        reg_data_out <= slv_reg3;
+	        reg_data_out <= std_logic_vector(counter);
 	      when others =>
 	        reg_data_out  <= (others => '0');
 	    end case;
@@ -397,16 +452,84 @@ begin
 
 
 	-- Add user logic here
+	
+	process (s_axi_aclk) 
+	begin
+	if(rising_edge(s_axi_aclk)) then
+	   counter <= counter +1;
+	   end if;
+   end process;
 
-your_instance_name : dds_compiler_0
+fake_adc : dds_compiler_0
   PORT MAP (
     aclk => s_axi_aclk,
-    aresetn => '1',
+    aresetn => rstn,
     s_axis_phase_tvalid => '1',
     s_axis_phase_tdata => slv_reg0,
-    m_axis_data_tvalid => m_axis_tvalid,
-    m_axis_data_tdata => m_axis_tdata
+    m_axis_data_tvalid => dds_0_valid,
+    m_axis_data_tdata => dds_0_o
   );
+
+tuner : dds_compiler_1
+    PORT MAP (
+    aclk => s_axi_aclk,
+    aresetn => rstn,
+    s_axis_phase_tvalid => '1',
+    s_axis_phase_tdata => slv_reg1,
+    m_axis_data_tvalid => dds_1_valid,
+    m_axis_data_tdata => dds_1_o
+  );
+
+   --multiply
+    dds_valid <= dds_0_valid and dds_1_valid;
+    dds_i_temp <=  std_logic_vector(unsigned(dds_1_o(31 downto 16)) * unsigned(dds_0_o));
+    dds_r_temp <=  std_logic_vector(unsigned(dds_1_o(15 downto 0)) * unsigned(dds_0_o));
+    dds_raw(31 downto 16) <=dds_i_temp(31 downto 16); --imaginary
+    dds_raw(15 downto 0 ) <= dds_r_temp(31 downto 16); --real
+   
+  -- filters
+    fir1_real : fir_compiler_0
+    PORT MAP(
+        aclk => s_axi_aclk,
+        s_axis_data_tvalid => dds_valid,
+        s_axis_data_tready => f1_r,
+        s_axis_data_tdata => dds_raw(15 downto 0),
+        m_axis_data_tvalid => f1_dvalid,
+        m_axis_data_tdata => f1_out
+    );
+   
+    fir2_real : fir_compiler_1
+    PORT MAP(
+        aclk => s_axi_aclk,
+        s_axis_data_tvalid => f1_dvalid,
+        s_axis_data_tready => f2_r,
+        s_axis_data_tdata => f1_out,
+        m_axis_data_tvalid => f2_dvalid,
+        m_axis_data_tdata => f2_out
+    );
+   
+    fir1_img : fir_compiler_0
+    PORT MAP(
+        aclk => s_axi_aclk,
+        s_axis_data_tvalid => dds_valid,
+        s_axis_data_tready => f1_r_i,
+        s_axis_data_tdata => dds_raw(31 downto 16),
+        m_axis_data_tvalid => f1_i_dvalid,
+        m_axis_data_tdata => f1_i_out
+    );
+   
+    fir2_img : fir_compiler_1
+    PORT MAP(
+        aclk => s_axi_aclk,
+        s_axis_data_tvalid => f1_i_dvalid,
+        s_axis_data_tready => f2_r_i,
+        s_axis_data_tdata => f1_i_out,
+        m_axis_data_tvalid => f2_i_dvalid,
+        m_axis_data_tdata => f2_i_out
+    );
+   
+    m_axis_tdata <= f2_i_out(54 DOWNTO 39) & f2_out(54 DOWNTO 39);
+    m_axis_tvalid <= f2_i_dvalid;
 
 
 	-- User logic ends
