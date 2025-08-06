@@ -422,7 +422,7 @@ begin
 	      when b"00" =>
 	        reg_data_out <= slv_reg0;
 	      when b"01" =>
-	        reg_data_out <= x"DEADBEEF";
+	        reg_data_out <= slv_reg1;
 	      when b"10" =>
 	        reg_data_out <= slv_reg2;
 	      when b"11" =>
@@ -438,7 +438,9 @@ begin
 	  if (rising_edge (S_AXI_ACLK)) then
 	    if ( S_AXI_ARESETN = '0' ) then
 	      axi_rdata  <= (others => '0');
+	      counter <= (others => '0');
 	    else
+	      counter <= counter +1;
 	      if (slv_reg_rden = '1') then
 	        -- When there is a valid read address (S_AXI_ARVALID) with 
 	        -- acceptance of read address by the slave (axi_arready), 
@@ -452,13 +454,8 @@ begin
 
 
 	-- Add user logic here
-	
-	process (s_axi_aclk) 
-	begin
-	if(rising_edge(s_axi_aclk)) then
-	   counter <= counter +1;
-	   end if;
-   end process;
+
+rstn <= not slv_reg2(0);
 
 fake_adc : dds_compiler_0
   PORT MAP (
@@ -482,8 +479,8 @@ tuner : dds_compiler_1
 
    --multiply
     dds_valid <= dds_0_valid and dds_1_valid;
-    dds_i_temp <=  std_logic_vector(unsigned(dds_1_o(31 downto 16)) * unsigned(dds_0_o));
-    dds_r_temp <=  std_logic_vector(unsigned(dds_1_o(15 downto 0)) * unsigned(dds_0_o));
+    dds_i_temp <=  std_logic_vector(signed(dds_1_o(31 downto 16)) * signed(dds_0_o));
+    dds_r_temp <=  std_logic_vector(signed(dds_1_o(15 downto 0)) * signed(dds_0_o));
     dds_raw(31 downto 16) <=dds_i_temp(31 downto 16); --imaginary
     dds_raw(15 downto 0 ) <= dds_r_temp(31 downto 16); --real
    
@@ -530,7 +527,6 @@ tuner : dds_compiler_1
    
     m_axis_tdata <= f2_i_out(54 DOWNTO 39) & f2_out(54 DOWNTO 39);
     m_axis_tvalid <= f2_i_dvalid;
-
 
 	-- User logic ends
 
