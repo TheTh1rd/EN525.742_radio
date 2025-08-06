@@ -526,7 +526,7 @@ tuner : dds_compiler_1
     );
    
     m_axis_tdata <= f2_i_out(54 DOWNTO 39) & f2_out(54 DOWNTO 39);
-    m_axis_tvalid <= f2_i_dvalid;
+    m_axis_tvalid <= f2_i_dvalid and slv_reg2(1);
 
 	-- User logic ends
 

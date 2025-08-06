@@ -77,8 +77,7 @@ int main()
 
     printf("\r\n\r\n\r\nLab 10 Lorenzo Pizarro - Custom Peripheral Demonstration\n\r");
     *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 1;
-    *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 0; // make sure radio isn't in reset
-    printf("Tuning Radio to 30MHz\n\r");
+    *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 2; // make sure radio isn't in reset and radio is enabled 0b10
     radioTuner_tuneRadio(my_periph,30e6);
     printf("Playing Tune at near 30MHz\r\n");
     play_tune(my_periph,30e6);
