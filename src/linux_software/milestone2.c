@@ -70,10 +70,11 @@ int main()
 // first, get a pointer to the peripheral base address using /dev/mem and the function mmap
     volatile unsigned int *my_periph = get_a_pointer(RADIO_PERIPH_ADDRESS);	
     volatile unsigned int *fifo_base = get_a_pointer(AXI_FIFO_STREAM_BASE_ADDR);
-
+    unsigned int fifo_occupancy;
+    volatile unsigned int received_data;
     printf("\r\n\r\n\r\nLab 11 Lorenzo Pizarro - milestone 2\n\r");
-    *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 1;
-    *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 2; // make sure radio isn't in reset and radio is enabled 0b10
+    *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 3;
+    *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 0; // make sure radio isn't in reset and radio is enabled 0b10
     radioTuner_tuneRadio(my_periph,30e6);
     printf("Playing Tune at near 30MHz\r\n");
     play_tune(my_periph,30e6);
@@ -83,12 +84,12 @@ int main()
 
     while (total_words_read < target_words) {
         // Read the receive occupancy (number of words available in the FIFO)
-        unsigned int fifo_occupancy = *(fifo_base + XLLF_RDFO_WORD_OFFSET);
-
+        fifo_occupancy = *(fifo_base + XLLF_RDFO_WORD_OFFSET);
+        printf("Fifo occupancy: %d .\n", fifo_occupancy);
         if (fifo_occupancy > 0) {
             // Read data from the FIFO
             for (int i = 0; i < fifo_occupancy; i++) {
-                volatile unsigned int received_data = *(fifo_base + XLLF_RDFD_WORD_OFFSET);
+                received_data = *(fifo_base + XLLF_RDFD_WORD_OFFSET);
                 // You can process the received_data here if needed
                 total_words_read++;
                 if (total_words_read >= target_words) {
@@ -99,8 +100,10 @@ int main()
             // If FIFO is empty, wait a bit before checking again to avoid busy-waiting
             usleep(100); // Sleep for 100 microseconds
         }
+        printf("Successfully read %d words from the FIFO.\n", total_words_read);
     }
-    printf("Successfully read %d words from the FIFO.\n", total_words_read);
+    printf("Finished reading %d words from the FIFO.\n", total_words_read);
+     *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 0b10;
 
     
     
