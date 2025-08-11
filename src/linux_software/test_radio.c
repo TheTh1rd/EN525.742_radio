@@ -76,7 +76,7 @@ int main()
     volatile unsigned int *my_periph = get_a_pointer(RADIO_PERIPH_ADDRESS);	
 
     printf("\r\n\r\n\r\nLab 10 Lorenzo Pizarro - Custom Peripheral Demonstration\n\r");
-    *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 1;
+    *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 3;
     *(my_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 0; // make sure radio isn't in reset
     printf("Tuning Radio to 30MHz\n\r");
     radioTuner_tuneRadio(my_periph,30e6);
