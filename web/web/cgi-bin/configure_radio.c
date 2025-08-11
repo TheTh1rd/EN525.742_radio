@@ -98,10 +98,23 @@ int main(void)
                 radioTuner_tuneRadio(radio_periph, (float)tune_freq_hz);
                 printf("<p>Frequencies set.</p>\n");
 
-                system("killall udp-streamer > /dev/null 2>&1");
+                // Kill any previously running streamer process.
+                // Note: The process name must match the executable name from stream_udp_data.c
+                system("killall stream_udp_data > /dev/null 2>&1");
+
                 if (streaming) {
-                    printf("<p>Starting UDP streamer...</p>\n");
-                    system("/usr/bin/udp-streamer &");
+                    // The streamer needs the client's IP address to send data to.
+                    // We get this from the REMOTE_ADDR CGI environment variable.
+                    char *remote_addr = getenv("REMOTE_ADDR");
+                    if (remote_addr) {
+                        char command[256];
+                        // NOTE: Assumes 'stream_udp_data' executable is in the same cgi-bin directory.
+                        snprintf(command, sizeof(command), "./stream_udp_data %s &", remote_addr);
+                        printf("<p>Starting UDP streamer to %s...</p>\n", remote_addr);
+                        system(command);
+                    } else {
+                        printf("<p style='color:orange;'>Warning: Could not determine client IP address (REMOTE_ADDR not set). UDP streamer not started.</p>\n");
+                    }
                 } else {
                     printf("<p>UDP streamer is disabled.</p>\n");
                 }
