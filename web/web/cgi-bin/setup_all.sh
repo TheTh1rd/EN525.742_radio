@@ -1,5 +1,5 @@
 #!/bin/bash
-ip="192.168.1.6" # Default IP
+ip="192.168.1.4" # Default IP
 
 killall -9 "stream_udp_data"
 
@@ -21,7 +21,8 @@ echo "</p></em><p>"
 echo "configuring Codec...<br>"
 ./configure_codec.sh
 echo "</p>"
-#echo "you would start your UDP Streamer Program Here...<br>"
-./stream_udp_data $ip
 echo "<p><em>All Done!</em></p>"
 echo "</body></html>"
+#echo "you would start your UDP Streamer Program Here...<br>"
+./stream_udp_data $ip
+
