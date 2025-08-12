@@ -100,29 +100,31 @@ int main(void)
 
                 // Kill any previously running streamer process.
                 // Note: The process name must match the executable name from stream_udp_data.c
-                system("killall stream_udp_data > /dev/null 2>&1");
+                // system("killall stream_udp_data > /dev/null 2>&1");
 
                 if (streaming) {
                     // The streamer needs the client's IP address to send data to.
                     // We get this from the REMOTE_ADDR CGI environment variable.
-                    char *remote_addr = getenv("REMOTE_ADDR");
-                    if (remote_addr) {
-                        char *ip_to_use = remote_addr;
-                        // Handle IPv4-mapped IPv6 addresses (e.g., "::ffff:192.168.1.100")
-                        // by stripping the "::ffff:" prefix if it exists.
-                        if (strncmp(ip_to_use, "::ffff:", 7) == 0) {
-                            ip_to_use += 7;
-                        }
-                        char command[256];
-                        // NOTE: Assumes 'stream_udp_data' executable is in the same cgi-bin directory.
-                        snprintf(command, sizeof(command), "./stream_udp_data %s &", ip_to_use);
-                        printf("<p>Starting UDP streamer to %s...</p>\n", ip_to_use);
-                        system(command);
-                    } else {
-                        printf("<p style='color:orange;'>Warning: Could not determine client IP address (REMOTE_ADDR not set). UDP streamer not started.</p>\n");
-                    }
+                    // char *remote_addr = getenv("REMOTE_ADDR");
+                    // if (remote_addr) {
+                    //     char *ip_to_use = remote_addr;
+                    //     // Handle IPv4-mapped IPv6 addresses (e.g., "::ffff:192.168.1.100")
+                    //     // by stripping the "::ffff:" prefix if it exists.
+                    //     if (strncmp(ip_to_use, "::ffff:", 7) == 0) {
+                    //         ip_to_use += 7;
+                    //     }
+                    //     char command[256];
+                    //     // NOTE: Assumes 'stream_udp_data' executable is in the same cgi-bin directory.
+                    //     snprintf(command, sizeof(command), "./stream_udp_data %s &", ip_to_use);
+                    //     printf("<p>Starting UDP streamer to %s...</p>\n", ip_to_use);
+                    //     system(command);
+                    // } else {
+                    //     printf("<p style='color:orange;'>Warning: Could not determine client IP address (REMOTE_ADDR not set). UDP streamer not started.</p>\n");
+                    // }
+                     *(radio_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 0;
                 } else {
                     printf("<p>UDP streamer is disabled.</p>\n");
+                    *(radio_periph+RADIO_TUNER_CONTROL_REG_OFFSET) = 2;
                 }
                 printf("<p style='color:green;'>Configuration complete!</p>\n");
             } else {
