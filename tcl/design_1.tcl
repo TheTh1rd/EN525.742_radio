@@ -710,8 +710,8 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets ps7_0_axi_periph_M00_AXI] [get_b
   [get_bd_pins full_radio_0/s00_axi_aresetn]
 
   # Create address segments
-  assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs full_radio_0/S00_AXI/S00_AXI_reg] -force
   assign_bd_address -offset 0x43C10000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_fifo_mm_s_0/S_AXI/Mem0] -force
+  assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs full_radio_0/S00_AXI/S00_AXI_reg] -force
 
 
   # Restore current instance
@@ -719,6 +719,7 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets ps7_0_axi_periph_M00_AXI] [get_b
 
   validate_bd_design
   save_bd_design
+  close_bd_design $design_name 
 }
 # End of create_root_design()
 

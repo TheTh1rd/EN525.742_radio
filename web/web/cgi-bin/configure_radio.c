@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <strings.h>
 
 // --- Peripheral Definitions (from other C files) ---
 #define RADIO_TUNER_FAKE_ADC_PINC_OFFSET 0
@@ -107,10 +108,26 @@ int main(void)
                     // We get this from the REMOTE_ADDR CGI environment variable.
                     char *remote_addr = getenv("REMOTE_ADDR");
                     if (remote_addr) {
-                        char *ip_to_use = remote_addr;
-                        // Handle IPv4-mapped IPv6 addresses (e.g., "::ffff:192.168.1.100")
-                        // by stripping the "::ffff:" prefix if it exists.
-                        if (strncmp(ip_to_use, "::ffff:", 7) == 0) {
+                        // Copy remote_addr to a local buffer for safe manipulation, as modifying
+                        // the string returned by getenv() is not safe. A size of 64 is
+                        // sufficient for IPv4/IPv6 addresses.
+                        char ip_buffer[64];
+                        strncpy(ip_buffer, remote_addr, sizeof(ip_buffer) - 1);
+                        ip_buffer[sizeof(ip_buffer) - 1] = '\0'; // Ensure null termination
+
+                        char *ip_to_use = ip_buffer;
+                        size_t len = strlen(ip_to_use);
+
+                        // Some web servers wrap IPv6 addresses in brackets, e.g., [::ffff:192.168.1.1].
+                        // We need to strip these brackets before processing.
+                        if (len > 2 && ip_to_use[0] == '[' && ip_to_use[len - 1] == ']') {
+                            ip_to_use[len - 1] = '\0'; // Remove trailing ']' by null-terminating
+                            ip_to_use++;               // Advance pointer past leading '['
+                        }
+
+                        // Handle IPv4-mapped IPv6 addresses (e.g., "::ffff:192.168.1.100").
+                        // Strip the "::ffff:" prefix if it exists.
+                        if (strncasecmp(ip_to_use, "::ffff:", 7) == 0) {
                             ip_to_use += 7;
                         }
                         char command[256];
